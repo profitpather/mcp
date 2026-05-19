@@ -1,6 +1,6 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
-  "name": "com.profitpather/profitpather",
+  "name": "com.profitpather/analytics",
   "title": "Profitpather",
   "description": "First-party unsampled Shopify analytics MCP — sessions, attribution, funnels, leaks. 26 tools.",
   "version": "0.3.7",

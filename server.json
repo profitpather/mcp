@@ -1,0 +1,17 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.profitpather/profitpather",
+  "title": "Profitpather",
+  "description": "First-party unsampled Shopify analytics MCP — sessions, attribution, funnels, leaks. 26 tools.",
+  "version": "0.3.7",
+  "repository": {
+    "url": "https://github.com/profitpather/mcp",
+    "source": "github"
+  },
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://profitpather.com/mcp"
+    }
+  ]
+}

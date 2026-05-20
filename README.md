@@ -6,7 +6,7 @@
 
 **Profitpather** is a first-party, unsampled analytics layer for Shopify stores. This is its public **Model Context Protocol** server — 26 tools that give AI agents live, raw, every-event access to merchant traffic, attribution, funnels, and revenue-leak diagnostics.
 
-- **Registry name:** `io.github.profitpather/profitpather` (or `com.profitpather/profitpather` via DNS-verified namespace — see [PUBLISHING.md](./PUBLISHING.md))
+- **Registry name:** [`com.profitpather/analytics`](https://registry.modelcontextprotocol.io/v0.1/servers?search=com.profitpather) (DNS-verified via `profitpather.com`)
 - **Endpoint:** `https://profitpather.com/mcp`
 - **Transport:** Streamable HTTP (protocol versions `2025-11-25` · `2025-06-18` · `2025-03-26` · `2024-11-05`)
 - **Auth:** OAuth 2.1 with Dynamic Client Registration (RFC 7591)

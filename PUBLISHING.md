@@ -1,71 +1,72 @@
 # Publishing to the Anthropic MCP Registry
 
-This repo contains **two ready-to-publish manifests** for the same Profitpather MCP server. Pick which namespace to ship under.
+Profitpather publishes under the **DNS-verified `com.profitpather/*` namespace** — the strongest authority signal in the registry (the entity controls `profitpather.com`).
 
-## The two options
-
-| File | Namespace | Auth required | Trust signal |
-|---|---|---|---|
-| [`server.json`](./server.json) | `io.github.profitpather/profitpather` | GitHub OAuth (`mcp-publisher login github`) — already done | "Published by the `profitpather` GitHub account" |
-| [`server.com.json`](./server.com.json) | `com.profitpather/profitpather` | DNS TXT challenge on `profitpather.com` (Ed25519 keypair) | "Published by the entity that controls profitpather.com" (verified domain — stronger signal) |
-
-Both point at the **same live endpoint** (`https://profitpather.com/mcp`) and expose the **same 26 tools**. The only difference is the registry name and the trust signal in aggregator listings (Smithery / PulseMCP / MCP.so / GitHub MCP Registry).
-
-> **You can publish both** — they live as separate registry entries. Some teams ship the GitHub-namespace one first (fast), then add the DNS-verified one once they've validated the workflow. Recommend doing **either**, not both, to avoid splitting install counts.
+Live at: [`com.profitpather/analytics` v0.3.7](https://registry.modelcontextprotocol.io/v0.1/servers?search=com.profitpather)
 
 ---
 
-## Option A — publish `io.github.profitpather/profitpather` (fast path, no DNS work)
+## One-time DNS authentication
+
+Already set up. Private key stored at `~/.config/mcp-publisher/profitpather.key.pem`. TXT record live at the profitpather.com apex.
+
+If you ever need to re-mint:
 
 ```bash
-mcp-publisher login github   # OAuth device-code flow, one-time
-mcp-publisher publish        # uses server.json by default
-```
+# 1. Generate Ed25519 keypair (use Homebrew openssl on macOS — LibreSSL doesn't support Ed25519)
+/opt/homebrew/bin/openssl genpkey -algorithm Ed25519 -out ~/.config/mcp-publisher/profitpather.key.pem
+chmod 600 ~/.config/mcp-publisher/profitpather.key.pem
 
-Within minutes the entry appears at `https://registry.modelcontextprotocol.io/v0.1/servers?search=profitpather`.
+# 2. Derive the TXT record value
+PUBLIC_KEY=$(/opt/homebrew/bin/openssl pkey -in ~/.config/mcp-publisher/profitpather.key.pem -pubout -outform DER | tail -c 32 | base64)
+echo "v=MCPv1; k=ed25519; p=${PUBLIC_KEY}"
+
+# 3. Add at profitpather.com apex DNS (Cloudflare → DNS → Add record → TXT)
+# 4. Verify propagation
+dig +short TXT profitpather.com | grep MCPv1
+```
 
 ---
 
-## Option B — publish `com.profitpather/profitpather` (DNS-verified path, ~5 min DNS dance)
+## Authenticating + publishing
 
-1. **Generate Ed25519 keypair locally:**
-   ```bash
-   openssl genpkey -algorithm Ed25519 -out key.pem
-   PUBLIC_KEY=$(openssl pkey -in key.pem -pubout -outform DER | tail -c 32 | base64)
-   echo "Add this TXT record to profitpather.com DNS:"
-   echo "profitpather.com. IN TXT \"v=MCPv1; k=ed25519; p=${PUBLIC_KEY}\""
-   ```
+```bash
+# Derive private key from PEM
+PRIVATE_KEY=$(/opt/homebrew/bin/openssl pkey -in ~/.config/mcp-publisher/profitpather.key.pem -noout -text | grep -A3 'priv:' | tail -n +2 | tr -d ' :\n')
 
-2. **Add the printed TXT record** to your DNS provider for `profitpather.com` at the apex (`@`).
+# Log in via DNS challenge
+mcp-publisher login dns --domain profitpather.com --private-key "$PRIVATE_KEY"
 
-3. **Wait ~30 seconds for DNS propagation, then verify:**
-   ```bash
-   dig +short TXT profitpather.com | grep MCPv1
-   ```
-
-4. **Authenticate via DNS challenge:**
-   ```bash
-   PRIVATE_KEY=$(openssl pkey -in key.pem -noout -text | grep -A3 'priv:' | tail -n +2 | tr -d ' :\n')
-   mcp-publisher login dns --domain profitpather.com --private-key "$PRIVATE_KEY"
-   ```
-
-5. **Publish using the `com.*` manifest:**
-   ```bash
-   mcp-publisher publish -f server.com.json
-   ```
-
-6. **(Optional) Once verified once, you can drop the TXT record** — DNS verification is needed only at publish time, not for ongoing operation. Consider keeping it for re-publish convenience though.
+# Publish (uses ./server.json by default)
+mcp-publisher publish
+```
 
 ---
 
 ## Updating after publish
 
-Bump the `version` field in whichever `server.json` is live (e.g. `0.3.7` → `0.3.8`) and re-run `mcp-publisher publish`. All other fields are mutable per-version (description, URL, repository, etc.). The `name` is permanent.
+1. Edit `server.json` (description, URL, version, etc.)
+2. **Bump the `version` field** (semver — registry rejects re-publishing the same version)
+3. `mcp-publisher publish`
 
-To deprecate an old version:
+All fields are mutable per-version EXCEPT `name` (`com.profitpather/analytics` is permanent).
+
+---
+
+## Validation (no publish, no side effects)
 
 ```bash
-mcp-publisher status --version 0.3.7 --status deprecated
+mcp-publisher validate
 ```
 
-To migrate from the `io.github` namespace to `com.profitpather` later: publish `com.profitpather/profitpather` fresh, then deprecate the `io.github.profitpather/profitpather` versions. Install counts don't transfer between names.
+Returns `✅ server.json is valid` on success.
+
+---
+
+## Deprecating an old version
+
+```bash
+mcp-publisher status com.profitpather/analytics --version 0.3.7 --status deprecated
+```
+
+Aggregators (Smithery / PulseMCP / MCP.so / GitHub MCP Registry) stop surfacing deprecated versions by default.
